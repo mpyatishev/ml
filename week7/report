@@ -1,0 +1,18 @@
+Признаки с пропускми : first_blood_time,first_blood_team,first_blood_player1,first_blood_player2,radiant_bottle_time,radiant_courier_time,radiant_flying_courier_time,radiant_first_ward_time,dire_bottle_time,dire_courier_time,dire_flying_courier_time,dire_first_ward_time
+Пропуски в признаках first_blood_time и first_blood_team означают, что в первые 5 минут матча никто не пролил кровь врага.
+Целевая переменная содержится в столбце radiant_win.
+n_estimators=10
+        score=0.605878873978
+        time elapsed: 0:00:48.834418
+n_estimators=20
+        score=0.624785106272
+        time elapsed: 0:01:34.666394
+n_estimators=30
+        score=0.63131397399
+        time elapsed: 0:02:19.824260
+n_estimators=40
+        score=0.635201013639
+        time elapsed: 0:03:00.415085
+n_estimators=50
+        score=0.638007361845
+        time elapsed: 0:03:43.841500
