@@ -120,10 +120,10 @@ def extract_match_features(match, time_point=None):
 def iterate_matches(matches_filename):
     with bz2.BZ2File(matches_filename) as f:
         for n, line in enumerate(f):
-            match = json.loads(line)
+            match = json.loads(line.decode('utf-8'))
             yield match
             if (n+1) % 1000 == 0:
-                print 'Processed %d matches' % (n+1)
+                print('Processed %d matches' % (n+1))
 
 
 def create_table(matches_filename, time_point):
