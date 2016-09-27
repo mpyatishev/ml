@@ -19,8 +19,11 @@ data = None
 def prepare():
     global data
     data = pd.read_csv("features.zip")
-    X = data.drop(["duration", "radiant_win", "tower_status_radiant",
-                   "tower_status_dire", "barracks_status_radiant",
+    X = data.drop(["duration",
+                   "radiant_win",
+                   "tower_status_radiant",
+                   "tower_status_dire",
+                   "barracks_status_radiant",
                    "barracks_status_dire"], axis=1)
     X.fillna(0, inplace=True)
     y = data["radiant_win"]
@@ -35,7 +38,7 @@ def grid_search(X, y, clf_cls, cv, **params):
         start_time = datetime.now()
         for train, test in cv:
             clf.fit(X[train], y[train])
-            res = clf.predict(X[test])
+            res = clf.predict_proba(X[test])[:, 1]
             scores += roc_auc_score(y[test], res)
         elapsed_time = datetime.now() - start_time
         score = scores / cv.n_folds
@@ -109,7 +112,7 @@ def bow(X, N):
     return X_pick
 
 
-def predict():
+def predict_proba_test():
     pass
 
 
