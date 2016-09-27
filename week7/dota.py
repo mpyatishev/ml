@@ -29,19 +29,23 @@ def prepare():
 
 
 def grid_search(X, y, clf_cls, cv, **params):
+    def do(param, value):
+        scores = 0
+        clf = clf_cls(random_state=241, **{param: value})
+        start_time = datetime.now()
+        for train, test in cv:
+            clf.fit(X[train], y[train])
+            res = clf.predict(X[test])
+            scores += roc_auc_score(y[test], res)
+        elapsed_time = datetime.now() - start_time
+        score = scores / cv.n_folds
+        print("%s=%s\n\
+              \tscore=%s\n\
+              \ttime elapsed: %s\n" % (param, value, score, elapsed_time))
+
     for param, values in params.items():
         for value in values:
-            print("%s=%s" % (param, value))
-            scores = 0
-            clf = clf_cls(random_state=241, **{param: value})
-            start_time = datetime.now()
-            for train, test in cv:
-                clf.fit(X[train], y[train])
-                res = clf.predict(X[test])
-                scores += roc_auc_score(y[test], res)
-            elapsed_time = datetime.now() - start_time
-            print("\tscore=%s" % (scores / cv.n_folds))
-            print("\ttime elapsed: %s" % elapsed_time)
+            do(param, value)
 
 
 def gradient(X, y, cv):
@@ -66,10 +70,10 @@ def logistic(X, y, cv):
     print("LogisticRegression")
     grid = {'C': np.power(10.0, np.arange(-5, 6))}
     grid_search(X, y, LogisticRegression, cv, **grid)
-    # clf = LogisticRegression()
+    # clf = LogisticRegression(random_state=241)
     # gs = GridSearchCV(clf, grid, scoring='roc_auc', cv=cv, verbose=1)
     # start_time = datetime.now()
-    # gs.fit(X_scaled, y)
+    # gs.fit(X, y)
     # elapsed_time = datetime.now() - start_time
     # print("\tscores:")
     # pprint(gs.grid_scores_)
@@ -105,6 +109,10 @@ def bow(X, N):
     return X_pick
 
 
+def predict():
+    pass
+
+
 if __name__ == "__main__":
     X, y = prepare()
     cv = KFold(y.size, n_folds=5, shuffle=True, random_state=241)
@@ -115,11 +123,14 @@ if __name__ == "__main__":
     X_scaled = scaler.fit_transform(X)
     logistic(X_scaled, y, cv)
 
-    X_cutted = cut_X(X_scaled)
-    logistic(X_cutted, y, cv)
+    X_cutted = cut_X(X)
+    scaler = StandardScaler()
+    X_cutted_scaled = scaler.fit_transform(X_cutted)
+    logistic(X_cutted_scaled, y, cv)
 
     N = calc_heroes(X)
+    print('Number of heroes: %s' % N)
     X_pick = bow(X, N)
 
-    X_with_bow = np.concatenate((X_cutted, X_pick), axis=1)
+    X_with_bow = np.concatenate((X_cutted_scaled, X_pick), axis=1)
     logistic(X_with_bow, y, cv)
