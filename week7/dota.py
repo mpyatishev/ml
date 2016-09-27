@@ -1,13 +1,13 @@
+import csv
+
 from datetime import datetime
 from functools import reduce
-# from pprint import pprint
 
 import numpy as np
 import pandas as pd
 
 from sklearn.cross_validation import KFold
 from sklearn.ensemble import GradientBoostingClassifier
-# from sklearn.grid_search import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import StandardScaler
@@ -45,44 +45,40 @@ def grid_search(X, y, clf_cls, cv, **params):
         print("%s=%s\n\
               \tscore=%s\n\
               \ttime elapsed: %s\n" % (param, value, score, elapsed_time))
+        return score, clf, elapsed_time
 
+    best_score = 0
+    best_param = None
+    best_clf = None
+    best_elapsed_time = None
     for param, values in params.items():
         for value in values:
-            do(param, value)
+            score, clf, elapsed_time = do(param, value)
+            if score > best_score:
+                best_score = score
+                best_param = {
+                    param: value
+                }
+                best_clf = clf
+                best_elapsed_time = elapsed_time
+    return {
+        'score': best_score,
+        'param': best_param,
+        'clf': best_clf,
+        'elapsed_time': best_elapsed_time,
+    }
 
 
 def gradient(X, y, cv):
     print("GradientBoostingClassifier")
     grid = {'n_estimators': (10, 20, 30, 40, 50)}
-    grid_search(X, y, GradientBoostingClassifier, cv, **grid)
-    # for n_estimators in (10, 20, 30, 40, 50):
-    #     print("n_estimators=%s" % n_estimators)
-    #     scores = 0
-    #     clf = GradientBoostingClassifier(n_estimators=n_estimators)
-    #     start_time = datetime.now()
-    #     for train, test in cv:
-    #         clf.fit(X.iloc[train], y[train])
-    #         res = clf.predict(X.iloc[test])
-    #         scores += roc_auc_score(y[test], res)
-    #     elapsed_time = datetime.now() - start_time
-    #     print("\tscore=%s" % (scores / cv.n_folds))
-    #     print("\ttime elapsed: %s" % elapsed_time)
+    return grid_search(X, y, GradientBoostingClassifier, cv, **grid)
 
 
 def logistic(X, y, cv):
     print("LogisticRegression")
     grid = {'C': np.power(10.0, np.arange(-5, 6))}
-    grid_search(X, y, LogisticRegression, cv, **grid)
-    # clf = LogisticRegression(random_state=241)
-    # gs = GridSearchCV(clf, grid, scoring='roc_auc', cv=cv, verbose=1)
-    # start_time = datetime.now()
-    # gs.fit(X, y)
-    # elapsed_time = datetime.now() - start_time
-    # print("\tscores:")
-    # pprint(gs.grid_scores_)
-    # print("\ttime elapsed: %s" % elapsed_time)
-    # print("\tbest_score=%s, best_params=%s" % (gs.best_score_,
-    #                                            gs.best_params_))
+    return grid_search(X, y, LogisticRegression, cv, **grid)
 
 
 def cut_X(X):
@@ -112,28 +108,52 @@ def bow(X, N):
     return X_pick
 
 
-def predict_proba_test():
-    pass
+def predict_proba_test(clf):
+    X_test = pd.read_csv("features_test.zip")
+    X_test.fillna(0, inplace=True)
+    X_cutted = cut_X(X_test)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_cutted)
+
+    probas = clf.predict_proba(X_scaled)
+    with open("result.csv", 'w') as csvfile:
+        fields = ('match_id', 'radiant_win')
+        writer = csv.DictWriter(csvfile, fields)
+        writer.writeheader()
+        for i, predict in enumerate(probas[:, 1]):
+            writer.writerow({
+                'match_id': X_test['match_id'][i],
+                'radiant_win': predict,
+            })
+    print("min=%s" % probas[:, 1].min())
+    print("max=%s" % probas[:, 1].max())
 
 
 if __name__ == "__main__":
     X, y = prepare()
     cv = KFold(y.size, n_folds=5, shuffle=True, random_state=241)
 
-    gradient(X.as_matrix(), y, cv)
+    bests = []
+    bests.append(gradient(X.as_matrix(), y, cv))
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    logistic(X_scaled, y, cv)
+    bests.append(logistic(X_scaled, y, cv))
 
     X_cutted = cut_X(X)
     scaler = StandardScaler()
     X_cutted_scaled = scaler.fit_transform(X_cutted)
-    logistic(X_cutted_scaled, y, cv)
+    bests.append(logistic(X_cutted_scaled, y, cv))
 
     N = calc_heroes(X)
     print('Number of heroes: %s' % N)
     X_pick = bow(X, N)
 
     X_with_bow = np.concatenate((X_cutted_scaled, X_pick), axis=1)
-    logistic(X_with_bow, y, cv)
+    bests.append(logistic(X_with_bow, y, cv))
+
+    print(bests)
+
+    best = next(reversed(sorted(bests, key=lambda o: o['score'])))
+    print("predicit with %s" % best['clf'])
+    predict_proba_test(best['clf'])
