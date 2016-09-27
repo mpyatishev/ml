@@ -11,8 +11,10 @@ def last_value(series, times, time_point=60*5):
     values = [v for t, v in zip(times, series) if t <= time_point]
     return values[-1] if len(values) > 0 else 0
 
+
 def filter_events(events, time_point=60*5):
     return [event for event in events if event['time'] <= time_point]
+
 
 def extract_match_features(match, time_point=None):
     extract_items_time = [
@@ -134,7 +136,7 @@ def create_table(matches_filename, time_point):
         if fields is None:
             fields = features.keys()
             df = {key: [] for key in fields}
-        for key, value in features.iteritems():
+        for key, value in features.items():
             df[key].append(value)
     df = pandas.DataFrame.from_records(df).ix[:, fields].set_index('match_id').sort_index()
     return df
