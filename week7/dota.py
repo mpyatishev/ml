@@ -13,11 +13,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import StandardScaler
 
 
-data = None
-
-
 def prepare():
-    global data
     data = pd.read_csv("features.zip")
     X = data.drop(["duration",
                    "radiant_win",
@@ -89,22 +85,24 @@ def cut_X(X):
 
 
 def calc_heroes(X):
-    radiant_heroes = reduce(lambda x, row: x + X[row],
-                            ('r%d_hero' % i for i in range(2, 6)),
-                            X['r1_hero'])
-    dire_heroes = reduce(lambda x, row: x + X[row],
-                         ('d%d_hero' % i for i in range(2, 6)),
-                         X['d1_hero'])
-    heroes = radiant_heroes + dire_heroes
-    return heroes.unique().size
+    heroes = reduce(
+        lambda x, row: x.append(X[row]),
+        (
+            '%s%d_hero' % (l, i)
+            for l in ('r', 'd')
+            for i in range(1, 6)
+        ), pd.Series()
+    ).unique()
+
+    return heroes.max()
 
 
 def bow(X, N):
-    X_pick = np.zeros((data.shape[0], N))
-    for i, match_id in enumerate(data.index):
+    X_pick = np.zeros((X.shape[0], N))
+    for i, match_id in enumerate(X.index):
         for p in range(1, 6):
-            X_pick[i, data.ix[match_id, 'r%d_hero' % p] - 1] = 1
-            X_pick[i, data.ix[match_id, 'd%d_hero' % p] - 1] = 1
+            X_pick[i, X.ix[match_id, 'r%d_hero' % p] - 1] = 1
+            X_pick[i, X.ix[match_id, 'd%d_hero' % p] - 1] = -1
     return X_pick
 
 
